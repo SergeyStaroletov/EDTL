@@ -18,7 +18,7 @@ class Term {
   virtual int value(int i, int j) = 0;
   void debug(const std::string &msg, int i) {
 #ifdef DEBUG
-    std::cout << "value of " << i << msg << " term" << std::endl;
+    std::cout << "value of " << i << " (" << msg << " term)" << std::endl;
 #endif
   }
 };
@@ -366,7 +366,7 @@ class CASE3 : public CheckableReq {
     return false;
   }
 
-  virtual int final(int i __unused, int j __unused) {  // !H
+  virtual int final(int i, int j) {  // !H
     return (new NegTerm(new ValTerm(vars::H)))->value(i, j);
   }
 
@@ -430,7 +430,7 @@ class CASE5 : public CheckableReq {
     return (new BackSlashTerm(new NegTerm(new ValTerm(vars::D))))->value(i, j);
   }
 
-  virtual int final(int i __unused, int j __unused) {              // passed(1h)
+  virtual int final(int i, int j) {                                // passed(1h)
     return (new PassedTerm(new ConstTerm(60 * 60)))->value(i, j);  //??
   }
 
