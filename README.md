@@ -6,7 +6,7 @@ EDTL4CSRS: Event-Driven Temporal Logic for Control Software Requirements Specifi
 Vladimir Zyubin, Igor Anureev, Natalia Garanina, Sergey Staroletov, Andrei Rozov, and Tatiana Liakh 
 (Institute of Automation and Electrometry)
 
-The Hand dryer is a simple control system which uses a hands sensor as an inputand a dryer switching device as an output. Due to the blackbox principle, we abstract from the control logic and observe only the input and output values. We formulate the following requirements:
+The Hand dryer is a simple control system which uses a hands sensor as an input and a dryer switching device as an output. Due to the blackbox principle, we abstract from the control logic and observe only the input and output values. We formulate the following requirements:
 
 1. If the dryer is on, then it turns off after no hands are present for 1 second.
 2. If the dryer was not turned on and hands appeared, it will turn on after nomore than 1 cycle.
