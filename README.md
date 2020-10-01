@@ -14,4 +14,4 @@ The Hand dryer is a simple control system which uses a hands sensor as an input 
 4. If there is no hands and the dryer is not turned on, the dryer will not turnon until the hands appear.
 5. The time of continuous work is no more than an hour.
 
-The requirenments are formulated and checked in c++ code in terms of EDTL. 
+The requirenments are formulated and checked in C++ code in terms of EDTL. 
