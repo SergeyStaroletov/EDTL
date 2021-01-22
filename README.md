@@ -15,3 +15,11 @@ The Hand dryer is a simple control system which uses a hands sensor as an input 
 5. The time of continuous work is no more than an hour.
 
 The requirenments are formulated and checked in C++ code in terms of EDTL. 
+
+[![DOI](https://zenodo.org/badge/296219834.svg)](https://zenodo.org/badge/latestdoi/296219834)
+
+
+Class diagram for the solution:
+
+<img src="terms.png">
+
