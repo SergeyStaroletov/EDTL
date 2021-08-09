@@ -1,16 +1,82 @@
 #include <iostream>
 #include <list>
+#include <map>
+#include <stdexcept>
+#include <vector>
 
-#define DEBUG
+//#define DEBUG
 
 enum vars { H, D };
 
-// test case:
-// HANDS yes/no
-int H_VAL[] = {1, 1, 0, 0, 0};
-// HANDS DRYER on/off
-int D_VAL[] = {0, 1, 1, 1, 1};
-// todo: test cases
+struct TestVec
+{
+    std::initializer_list<bool> vals;
+    int key;
+};
+
+class Havoc
+{
+public:
+    static Havoc *inst;
+
+    static Havoc *instance() { return inst; }
+    Havoc() { inst = this; }
+
+    //    havoc->addVector({{1, 1, 0, 0, 0}, vars::H}, {{0, 1, 1, 1, 1}, vars::D} );
+
+    void addVector(std::initializer_list<TestVec> tv)
+    {
+        std::vector<bool> vec;
+        std::map<int, std::vector<bool>> mp;
+        //check we have H and D
+        unsigned sz = 0;
+        for (auto x : tv) {
+            std::vector<bool> vec;
+            for (auto y : x.vals) {
+                vec.push_back(y);
+            }
+            mp[x.key] = vec;
+            if (sz != 0 && vec.size() != sz)
+                throw std::invalid_argument("wrong vec size");
+            sz = vec.size();
+        }
+        sizes.push_back(sz);
+        casesData.push_back(mp);
+        cases++;
+    }
+
+    int getCurrentMaxStep() { return sizes[currentCase]; }
+
+    bool get(int key, int num)
+    {
+        assert(casesData.size() >= currentCase);
+        auto m = casesData.at(currentCase);
+        if (m.find(key) != m.end()) {
+            std::vector<bool> vec = m[key];
+            return vec[num];
+        }
+        throw std::invalid_argument("not found");
+        return false;
+    }
+
+    unsigned getCases() { return cases; }
+
+    void setActiveCase(unsigned c)
+    {
+        assert(c < cases);
+        currentCase = c;
+    }
+
+private:
+    unsigned cases;
+    std::vector<unsigned> sizes;
+    unsigned currentCase;
+    Havoc(const Havoc &root) = delete;
+    Havoc &operator=(const Havoc &) = delete;
+    std::vector<std::map<int, std::vector<bool>>> casesData;
+};
+
+Havoc *Havoc::inst = 0;
 
 // logic in terms
 class Term {
@@ -43,8 +109,9 @@ class ValTerm : public Term {
     if (i < 0) i = 0;
     debug("val", i);
 
-    if (var == vars::D) return D_VAL[i];
-    if (var == vars::H) return H_VAL[i];
+    return Havoc::instance()->get(var, i);
+    //if (var == vars::D) return D_VAL[i];
+    //if (var == vars::H) return H_VAL[i];
     return 0;
   };
 };
@@ -289,10 +356,10 @@ class CASE1 : public CheckableReq {
         "If the dryer is on, then it turns off after no hands for 1 second");
   }
 
-  virtual int trigger(int i, int j) {  // \H && D
-    return (new AndTerm(new BackSlashTerm(new ValTerm(vars::H)),
-                        (new ValTerm(vars::D))))
-        ->value(i, j);
+  virtual int trigger(int i, int j)
+  { // \H && D
+      return (new AndTerm(new BackSlashTerm(new ValTerm(vars::H)), (new ValTerm(vars::D))))
+          ->value(i, j);
   }
 
   virtual int release(int i, int j) {  // H
@@ -447,41 +514,52 @@ class CASE5 : public CheckableReq {
   }
 };
 
-class CheckableSystem {
- public:
-  CheckableSystem(){};
+class CheckableSystem
+{
+public:
+    CheckableSystem(){};
 
-  void addReqs(std::initializer_list<CheckableReq *> reqs) {
-    for (auto req : reqs) {
-      addReq(req);
+    void addReqs(std::initializer_list<CheckableReq *> reqs)
+    {
+        for (auto req : reqs) {
+            addReq(req);
+        }
     }
-  }
-  void addReq(CheckableReq *req) { reqs.push_back(req); }
+    void addReq(CheckableReq *req) { reqs.push_back(req); }
 
-  bool check() {
-    int max = sizeof(H_VAL) / sizeof(int) - 1;
+    bool check()
+    {
+        Havoc *havoc = Havoc::instance();
+        for (unsigned c = 0; c < havoc->getCases(); c++) {
+            havoc->setActiveCase(c);
+            std::cout << "Checking test case " << c << " " << std::endl;
+            int len = havoc->getCurrentMaxStep();
+            for (auto req : reqs) {
+                std::cout << "Checking '" << req->getDesc() << "'" << std::endl;
+                if (!req->check(len))
+                    return false;
+            }
+        }
 
-    for (auto req : reqs) {
-      std::cout << "Checking '" << req->getDesc() << "'" << std::endl;
-      if (!req->check(max)) return false;
+        return true;
     }
-    return true;
-  }
 
- private:
-  std::list<CheckableReq *> reqs;
+private:
+    std::list<CheckableReq *> reqs;
 };
 
-int main(int argc __unused, char *argv[] __unused) {
-  CheckableSystem *system = new CheckableSystem();
+int main(int argc __unused, char *argv[] __unused)
+{
+    CheckableSystem *system = new CheckableSystem();
+    Havoc *havoc = new Havoc();
+    havoc->addVector({TestVec{{1, 1, 0, 0, 0}, vars::H}, TestVec{{0, 1, 1, 1, 1}, vars::D}});
 
-  system->addReqs(
-      {new CASE1(), new CASE2(), new CASE3(), new CASE4(), new CASE5()});
+    system->addReqs({new CASE1(), new CASE2(), new CASE3(), new CASE4(), new CASE5()});
 
-  if (system->check())
-    std::cout << "System is safe" << std::endl;
-  else
-    std::cout << "! System is unsafe " << std::endl;
+    if (system->check())
+        std::cout << "System is safe" << std::endl;
+    else
+        std::cout << "! System is unsafe " << std::endl;
 
-  return 0;
+    return 0;
 }
