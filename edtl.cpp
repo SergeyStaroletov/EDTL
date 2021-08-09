@@ -1,17 +1,18 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <vector>
 
 //#define DEBUG
 
-enum vars { H, D };
+enum Vars { H, D };
 
 struct TestVec
 {
     std::initializer_list<bool> vals;
-    int key;
+    Vars key;
 };
 
 class Havoc
@@ -22,13 +23,22 @@ public:
     static Havoc *instance() { return inst; }
     Havoc() { inst = this; }
 
-    //    havoc->addVector({{1, 1, 0, 0, 0}, vars::H}, {{0, 1, 1, 1, 1}, vars::D} );
-
     void addVector(std::initializer_list<TestVec> tv)
     {
+        // call can be havoc->addVector({{1, 1, 0, 0, 0}, vars::H}, {{0, 1, 1, 1, 1}, vars::D} );
         std::vector<bool> vec;
-        std::map<int, std::vector<bool>> mp;
+        std::map<Vars, std::vector<bool>> mp;
         //check we have H and D
+        std::set<Vars> s1, s2;
+        for (auto x : tv) {
+            s1.insert(x.key);
+        }
+        for (int v = H; v <= D; v++) {
+            s2.insert(static_cast<Vars>(v));
+        }
+        if (s1 != s2)
+            throw std::invalid_argument("Not all variables are presented in addVector()");
+
         unsigned sz = 0;
         for (auto x : tv) {
             std::vector<bool> vec;
@@ -37,7 +47,7 @@ public:
             }
             mp[x.key] = vec;
             if (sz != 0 && vec.size() != sz)
-                throw std::invalid_argument("wrong vec size");
+                throw std::invalid_argument("Wrong vec size in addVector()");
             sz = vec.size();
         }
         sizes.push_back(sz);
@@ -47,7 +57,7 @@ public:
 
     int getCurrentMaxStep() { return sizes[currentCase]; }
 
-    bool get(int key, int num)
+    bool get(Vars key, int num)
     {
         assert(casesData.size() >= currentCase);
         auto m = casesData.at(currentCase);
@@ -55,7 +65,7 @@ public:
             std::vector<bool> vec = m[key];
             return vec[num];
         }
-        throw std::invalid_argument("not found");
+        throw std::invalid_argument("Key not found in get()");
         return false;
     }
 
@@ -73,7 +83,7 @@ private:
     unsigned currentCase;
     Havoc(const Havoc &root) = delete;
     Havoc &operator=(const Havoc &) = delete;
-    std::vector<std::map<int, std::vector<bool>>> casesData;
+    std::vector<std::map<Vars, std::vector<bool>>> casesData;
 };
 
 Havoc *Havoc::inst = 0;
@@ -99,21 +109,21 @@ class ConstTerm : public Term {
 };
 
 // value of the variable
-class ValTerm : public Term {
- private:
-  vars var;
+class ValTerm : public Term
+{
+private:
+    Vars var;
 
- public:
-  ValTerm(vars var) : var(var) {}
-  int value(int i, int j __unused) {
-    if (i < 0) i = 0;
-    debug("val", i);
+public:
+    ValTerm(Vars var) : var(var) {}
+    int value(int i, int j __unused)
+    {
+        if (i < 0)
+            i = 0;
+        debug("val", i);
 
-    return Havoc::instance()->get(var, i);
-    //if (var == vars::D) return D_VAL[i];
-    //if (var == vars::H) return H_VAL[i];
-    return 0;
-  };
+        return Havoc::instance()->get(var, i);
+    };
 };
 
 // boolean operations
@@ -358,12 +368,13 @@ class CASE1 : public CheckableReq {
 
   virtual int trigger(int i, int j)
   { // \H && D
-      return (new AndTerm(new BackSlashTerm(new ValTerm(vars::H)), (new ValTerm(vars::D))))
+      return (new AndTerm(new BackSlashTerm(new ValTerm(Vars::H)), (new ValTerm(Vars::D))))
           ->value(i, j);
   }
 
-  virtual int release(int i, int j) {  // H
-    return (new ValTerm(vars::H))->value(i, j);
+  virtual int release(int i, int j)
+  { // H
+      return (new ValTerm(Vars::H))->value(i, j);
   }
 
   virtual int final(int i, int j) {  // passed 1s
@@ -374,12 +385,14 @@ class CASE1 : public CheckableReq {
     return true;
   }
 
-  virtual int invariant(int i, int j) {  // D
-    return (new ValTerm(vars::D))->value(i, j);
+  virtual int invariant(int i, int j)
+  { // D
+      return (new ValTerm(Vars::D))->value(i, j);
   }
 
-  virtual int reaction(int i, int j) {  // !D
-    return (new NegTerm(new ValTerm(vars::D)))->value(i, j);
+  virtual int reaction(int i, int j)
+  { // !D
+      return (new NegTerm(new ValTerm(Vars::D)))->value(i, j);
   }
 };
 
@@ -391,10 +404,10 @@ class CASE2 : public CheckableReq {
         "after no more than 1 cycle");
   }
 
-  virtual int trigger(int i, int j) {  // /H && !D
-    return (new AndTerm(new SlashTerm(new ValTerm(vars::H)),
-                        (new NegTerm(new ValTerm(vars::D)))))
-        ->value(i, j);
+  virtual int trigger(int i, int j)
+  { // /H && !D
+      return (new AndTerm(new SlashTerm(new ValTerm(Vars::H)), (new NegTerm(new ValTerm(Vars::D)))))
+          ->value(i, j);
   }
 
   virtual int release(int i __unused, int j __unused) {  // false
@@ -409,12 +422,14 @@ class CASE2 : public CheckableReq {
     return true;
   }
 
-  virtual int invariant(int i, int j) {  // !D
-    return (new NegTerm(new ValTerm(vars::D)))->value(i, j);
+  virtual int invariant(int i, int j)
+  { // !D
+      return (new NegTerm(new ValTerm(Vars::D)))->value(i, j);
   }
 
-  virtual int reaction(int i, int j) {  // D
-    return (new ValTerm(vars::D))->value(i, j);
+  virtual int reaction(int i, int j)
+  { // D
+      return (new ValTerm(Vars::D))->value(i, j);
   }
 };
 
@@ -424,25 +439,27 @@ class CASE3 : public CheckableReq {
     setDesc("If there are hands and the dryer is on, it will not turn off");
   }
 
-  virtual int trigger(int i, int j) {  // H && D
-    return (new AndTerm(new ValTerm(vars::H), new ValTerm(vars::D)))
-        ->value(i, j);
+  virtual int trigger(int i, int j)
+  { // H && D
+      return (new AndTerm(new ValTerm(Vars::H), new ValTerm(Vars::D)))->value(i, j);
   }
 
   virtual int release(int i __unused, int j __unused) {  // false
     return false;
   }
 
-  virtual int final(int i, int j) {  // !H
-    return (new NegTerm(new ValTerm(vars::H)))->value(i, j);
+  virtual int final(int i, int j)
+  { // !H
+      return (new NegTerm(new ValTerm(Vars::H)))->value(i, j);
   }
 
   virtual int delay(int i __unused, int j __unused) {  // true
     return true;
   }
 
-  virtual int invariant(int i, int j) {  // D
-    return (new ValTerm(vars::D))->value(i, j);
+  virtual int invariant(int i, int j)
+  { // D
+      return (new ValTerm(Vars::D))->value(i, j);
   }
 
   virtual int reaction(int i __unused, int j __unused) {  // *
@@ -458,14 +475,15 @@ class CASE4 : public CheckableReq {
         "not turn on until the hands appear");
   }
 
-  virtual int trigger(int i, int j) {  // !H && !D
-    return (new AndTerm(new NegTerm(new ValTerm(vars::H)),
-                        new NegTerm(new ValTerm(vars::D))))
-        ->value(i, j);
+  virtual int trigger(int i, int j)
+  { // !H && !D
+      return (new AndTerm(new NegTerm(new ValTerm(Vars::H)), new NegTerm(new ValTerm(Vars::D))))
+          ->value(i, j);
   }
 
-  virtual int release(int i, int j) {  // H
-    return (new ValTerm(vars::H))->value(i, j);
+  virtual int release(int i, int j)
+  { // H
+      return (new ValTerm(Vars::H))->value(i, j);
   }
 
   virtual int final(int i __unused, int j __unused) {  // false
@@ -476,8 +494,9 @@ class CASE4 : public CheckableReq {
     return true;
   }
 
-  virtual int invariant(int i, int j) {  // !D
-    return (new NegTerm(new ValTerm(vars::D)))->value(i, j);
+  virtual int invariant(int i, int j)
+  { // !D
+      return (new NegTerm(new ValTerm(Vars::D)))->value(i, j);
   }
 
   virtual int reaction(int i __unused, int j __unused) {  // *
@@ -489,12 +508,14 @@ class CASE5 : public CheckableReq {
  public:
   CASE5() { setDesc("The time of continuous work is no more than an hour"); }
 
-  virtual int trigger(int i, int j) {  // /D
-    return (new SlashTerm(new NegTerm(new ValTerm(vars::D))))->value(i, j);
+  virtual int trigger(int i, int j)
+  { // /D
+      return (new SlashTerm(new NegTerm(new ValTerm(Vars::D))))->value(i, j);
   }
 
-  virtual int release(int i, int j) {  // \D
-    return (new BackSlashTerm(new NegTerm(new ValTerm(vars::D))))->value(i, j);
+  virtual int release(int i, int j)
+  { // \D
+      return (new BackSlashTerm(new NegTerm(new ValTerm(Vars::D))))->value(i, j);
   }
 
   virtual int final(int i, int j) {                                // passed(1h)
@@ -509,8 +530,9 @@ class CASE5 : public CheckableReq {
     return true;
   }
 
-  virtual int reaction(int i, int j) {  // \D
-    return (new BackSlashTerm(new NegTerm(new ValTerm(vars::D))))->value(i, j);
+  virtual int reaction(int i, int j)
+  { // \D
+      return (new BackSlashTerm(new NegTerm(new ValTerm(Vars::D))))->value(i, j);
   }
 };
 
@@ -529,19 +551,23 @@ public:
 
     bool check()
     {
+        bool ok = true;
         Havoc *havoc = Havoc::instance();
         for (unsigned c = 0; c < havoc->getCases(); c++) {
             havoc->setActiveCase(c);
             std::cout << "Checking test case " << c << " " << std::endl;
             int len = havoc->getCurrentMaxStep();
             for (auto req : reqs) {
-                std::cout << "Checking '" << req->getDesc() << "'" << std::endl;
-                if (!req->check(len))
-                    return false;
+                std::cout << "Checking '" << req->getDesc() << "' ";
+                if (!req->check(len)) {
+                    std::cout << "[failed]" << std::endl;
+                    ok = false;
+                } else {
+                    std::cout << "[OK]" << std::endl;
+                }
             }
         }
-
-        return true;
+        return ok;
     }
 
 private:
@@ -552,14 +578,27 @@ int main(int argc __unused, char *argv[] __unused)
 {
     CheckableSystem *system = new CheckableSystem();
     Havoc *havoc = new Havoc();
-    havoc->addVector({TestVec{{1, 1, 0, 0, 0}, vars::H}, TestVec{{0, 1, 1, 1, 1}, vars::D}});
 
-    system->addReqs({new CASE1(), new CASE2(), new CASE3(), new CASE4(), new CASE5()});
+    try {
+        havoc->addVector(
+            {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{0, 1, 1, 1, 1}, Vars::D}}); //ok
+        havoc->addVector(
+            {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{1, 0, 1, 0, 1}, Vars::D}}); //bug
+        //havoc->addVector(
+        //    {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{1, 0, 1, 0}, Vars::D}}); //wrong
+        //havoc->addVector({TestVec{{1, 1, 0, 0, 0}, Vars::H}}); //wrong
 
-    if (system->check())
-        std::cout << "System is safe" << std::endl;
-    else
-        std::cout << "! System is unsafe " << std::endl;
+        system->addReqs({new CASE1(), new CASE2(), new CASE3(), new CASE4(), new CASE5()});
 
+        if (system->check())
+            std::cout << "System is safe" << std::endl;
+        else
+            std::cout << "! System is unsafe " << std::endl;
+
+    } catch (std::invalid_argument(s)) {
+        std::cout << "Exception " << s.what() << std::endl;
+    }
+
+    delete system;
     return 0;
 }
