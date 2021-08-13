@@ -1,3 +1,7 @@
+/*
+@author Sergey Staroletov
+@year 2020-2021
+*/
 #include <iostream>
 #include <list>
 #include <map>
@@ -23,7 +27,7 @@ public:
     static Havoc *instance() { return inst; }
     Havoc() { inst = this; }
 
-    void addVector(std::initializer_list<TestVec> tv)
+    void addTestVector(std::initializer_list<TestVec> tv)
     {
         // call can be havoc->addVector({{1, 1, 0, 0, 0}, vars::H}, {{0, 1, 1, 1, 1}, vars::D} );
         std::vector<bool> vec;
@@ -89,23 +93,26 @@ private:
 Havoc *Havoc::inst = 0;
 
 // logic in terms
-class Term {
- public:
-  virtual int value(int i, int j) = 0;
-  void debug(const std::string &msg, int i) {
+class Term
+{
+public:
+    virtual int value(int i, int j) = 0;
+    void debug(const std::string &msg, int i)
+    {
 #ifdef DEBUG
     std::cout << "value of " << i << " (" << msg << " term)" << std::endl;
 #endif
-  }
+    }
 };
 
 // const
-class ConstTerm : public Term {
-  int val;
+class ConstTerm : public Term
+{
+    int val;
 
- public:
-  ConstTerm(int c) : val(c) {}
-  int value(int i __unused, int j __unused) { return val; }
+public:
+    ConstTerm(int c) : val(c) {}
+    int value(int i __unused, int j __unused) { return val; }
 };
 
 // value of the variable
@@ -329,6 +336,7 @@ class CheckableReq {
   virtual int delay(int i, int j) = 0;
   virtual int final(int i, int j) = 0;
 
+  //bounded checking algorhitm
   bool check(int len) {
     int trig = 1;
     while (trig < len) {
@@ -557,7 +565,7 @@ public:
             havoc->setActiveCase(c);
             std::cout << "Checking test case " << c << " " << std::endl;
             int len = havoc->getCurrentMaxStep();
-            for (auto req : reqs) {
+            for (auto req : this->reqs) {
                 std::cout << "Checking '" << req->getDesc() << "' ";
                 if (!req->check(len)) {
                     std::cout << "[failed]" << std::endl;
@@ -580,10 +588,10 @@ int main(int argc __unused, char *argv[] __unused)
     Havoc *havoc = new Havoc();
 
     try {
-        havoc->addVector(
+        havoc->addTestVector(
             {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{0, 1, 1, 1, 1}, Vars::D}}); //ok
-        havoc->addVector(
-            {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{1, 0, 1, 0, 1}, Vars::D}}); //bug
+        havoc->addTestVector(
+            {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{1, 1, 0, 0, 1}, Vars::D}}); //bug
         //havoc->addVector(
         //    {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{1, 0, 1, 0}, Vars::D}}); //wrong
         //havoc->addVector({TestVec{{1, 1, 0, 0, 0}, Vars::H}}); //wrong
