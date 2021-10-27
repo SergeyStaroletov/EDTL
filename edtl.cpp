@@ -202,7 +202,7 @@ class SlashTerm : public Term {
     debug("slash", i);
     if (i <= 0) return false;
 
-    return (i != 0) && term->value(i - 1, j) && !term->value(i, j);
+    return (i != 0) && !term->value(i - 1, j) && term->value(i, j);
   }
 };
 
@@ -216,7 +216,7 @@ class BackSlashTerm : public Term {
     debug("backslash", i);
     if (i <= 0) return false;
 
-    return (i != 0) && !term->value(i - 1, j) && term->value(i, j);
+    return (i != 0) && term->value(i - 1, j) && !term->value(i, j);
   }
 };
 
@@ -244,7 +244,7 @@ class PassedTerm : public Term {
   int value(int i, int j) {
     debug("passed", i);
 
-    return (i >= j + term->value(i, j));  // check it
+    return (i >= j + term->value(i, j) - 1); // check it
   }
 };
 
@@ -367,41 +367,41 @@ class CheckableReq {
   }
 };
 
-class CASE1 : public CheckableReq {
- public:
-  CASE1() {
-    setDesc(
-        "If the dryer is on, then it turns off after no hands for 1 second");
-  }
+class CASE1 : public CheckableReq
+{
+public:
+    CASE1() { setDesc("If the dryer is on, then it turns off after no hands for 2 seconds"); }
 
-  virtual int trigger(int i, int j)
-  { // \H && D
-      return (new AndTerm(new BackSlashTerm(new ValTerm(Vars::H)), (new ValTerm(Vars::D))))
-          ->value(i, j);
-  }
+    virtual int trigger(int i, int j)
+    { // \H && D
+        return (new AndTerm(new BackSlashTerm(new ValTerm(Vars::H)), (new ValTerm(Vars::D))))
+            ->value(i, j);
+    }
 
-  virtual int release(int i, int j)
-  { // H
-      return (new ValTerm(Vars::H))->value(i, j);
-  }
+    virtual int release(int i, int j)
+    { // H
+        return (new ValTerm(Vars::H))->value(i, j);
+    }
 
-  virtual int final(int i, int j) {  // passed 1s
-    return (new PassedTerm(new ConstTerm(1)))->value(i, j);
-  }
+    virtual int final(int i, int j)
+    { // passed 2s
+        return (new PassedTerm(new ConstTerm(2)))->value(i, j);
+    }
 
-  virtual int delay(int i __unused, int j __unused) {  // true
-    return true;
-  }
+    virtual int delay(int i __unused, int j __unused)
+    { // true
+        return true;
+    }
 
-  virtual int invariant(int i, int j)
-  { // D
-      return (new ValTerm(Vars::D))->value(i, j);
-  }
+    virtual int invariant(int i, int j)
+    { // D
+        return (new ValTerm(Vars::D))->value(i, j);
+    }
 
-  virtual int reaction(int i, int j)
-  { // !D
-      return (new NegTerm(new ValTerm(Vars::D)))->value(i, j);
-  }
+    virtual int reaction(int i, int j)
+    { // !D
+        return (new NegTerm(new ValTerm(Vars::D)))->value(i, j);
+    }
 };
 
 class CASE2 : public CheckableReq {
@@ -589,9 +589,11 @@ int main(int argc __unused, char *argv[] __unused)
 
     try {
         havoc->addTestVector(
-            {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{0, 1, 1, 1, 1}, Vars::D}}); //ok
-        havoc->addTestVector(
-            {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{1, 1, 0, 0, 1}, Vars::D}}); //bug
+            {TestVec{{0, 1, 1, 0, 0, 0}, Vars::H}, TestVec{{0, 0, 1, 1, 1, 0}, Vars::D}}); //good
+        havoc->addTestVector({TestVec{{1, 1, 0, 0, 0, 0}, Vars::H},
+                              TestVec{{1, 1, 0, 0, 1, 1}, Vars::D}}); //violates some requirements
+
+        //different dimensions: will not be compiled
         //havoc->addVector(
         //    {TestVec{{1, 1, 0, 0, 0}, Vars::H}, TestVec{{1, 0, 1, 0}, Vars::D}}); //wrong
         //havoc->addVector({TestVec{{1, 1, 0, 0, 0}, Vars::H}}); //wrong
