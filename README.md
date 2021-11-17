@@ -1,10 +1,6 @@
 # EDTL
-Event-driven temporal logic, test implementation
+Event-driven temporal logic, test implementation  in C++
 
-
-EDTL4CSRS: Event-Driven Temporal Logic for Control Software Requirements Specification
-Vladimir Zyubin, Igor Anureev, Natalia Garanina, Sergey Staroletov, Andrei Rozov, and Tatiana Liakh 
-(Institute of Automation and Electrometry)
 
 The Hand dryer is a simple control system which uses a hands sensor as an input and a dryer switching device as an output. 
 Due to the blackbox principle, we abstract from the control logic and observe only the input and output values. 
@@ -17,8 +13,6 @@ We formulate the following requirements:
 5. The time of continuous work is no more than an hour.
 
 The requirenments are formulated and checked in C++ code in terms of EDTL. 
-
-[![DOI](https://zenodo.org/badge/296219834.svg)](https://zenodo.org/badge/latestdoi/296219834)
 
 
 Class diagram for the solution:
