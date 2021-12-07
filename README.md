@@ -14,10 +14,11 @@ We formulate the following requirements:
 
 The requirenments are formulated and checked in C++ code in terms of EDTL. 
 
+```
+CheckableSystem * system = new CheckableSystem();
 
-CheckableSystem *system = new CheckableSystem();
 system->addReqs({
- new CASE1(), new CASE2(), new CASE3(), new CASE4(), new CASE5()
+    new CASE1(), new CASE2(), new CASE3(), new CASE4(), new CASE5()
 });
 
 havoc->addTestVector({
@@ -33,6 +34,6 @@ if (system->check())
     cout << "System is safe" << endl;
 else
     cout << "System is unsafe " << endl;
-    
-    
+```
+
 
