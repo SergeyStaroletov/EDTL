@@ -15,7 +15,24 @@ We formulate the following requirements:
 The requirenments are formulated and checked in C++ code in terms of EDTL. 
 
 
-Class diagram for the solution:
+CheckableSystem *system = new CheckableSystem();
+system->addReqs({
+ new CASE1(), new CASE2(), new CASE3(), new CASE4(), new CASE5()
+});
 
-<img src="terms.png">
+havoc->addTestVector({
+    TestVec{{0, 1, 1, 0, 0, 0}, Vars::H},
+    TestVec{{0, 0, 1, 1, 1, 0}, Vars::D}
+}); //good
+havoc->addTestVector({
+    TestVec{{1, 1, 0, 0, 0, 0}, Vars::H},
+    TestVec{{1, 1, 0, 0, 1, 1}, Vars::D}
+}); //violates some requirements
+
+if (system->check())
+    cout << "System is safe" << endl;
+else
+    cout << "System is unsafe " << endl;
+    
+    
 
