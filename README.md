@@ -1,6 +1,7 @@
 # EDTL
 Event-driven temporal logic, test implementation  in C++
 
+Initial article was published in <a href="https://link.springer.com/chapter/10.1007/978-3-030-89247-0_7">FSEN'21</a>
 
 The Hand dryer is a simple control system which uses a hands sensor as an input and a dryer switching device as an output. 
 Due to the blackbox principle, we abstract from the control logic and observe only the input and output values. 
@@ -13,6 +14,8 @@ We formulate the following requirements:
 5. The time of continuous work is no more than an hour.
 
 The requirenments are formulated and checked in C++ code in terms of EDTL. 
+
+Implementation-specific issues will be discussed in a <a href="http://www.ict.nsc.ru/jct/site_content?l=eng">JCT article</a> (accepted).
 
 ```
 CheckableSystem * system = new CheckableSystem();
