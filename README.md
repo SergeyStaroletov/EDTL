@@ -1,5 +1,5 @@
 # EDTL
-Event-driven temporal logic, test implementation  in C++
+Event-driven temporal logic (rule-based patterns), test implementation  in C++
 
 Initial article was published in <a href="https://link.springer.com/chapter/10.1007/978-3-030-89247-0_7">FSEN'21</a>
 
