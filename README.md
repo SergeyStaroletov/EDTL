@@ -15,7 +15,7 @@ We formulate the following requirements:
 
 The requirenments are formulated and checked in C++ code in terms of EDTL. 
 
-Implementation-specific issues will be discussed in a <a href="http://www.ict.nsc.ru/jct/annotation/2056?l=eng">JCT article</a> (accepted).
+Implementation-specific issues are discussed in a <a href="http://www.ict.nsc.ru/jct/annotation/2056?l=eng">JCT article DOI: 10.25743/ICT.2022.27.1.007</a> .
 
 ```
 CheckableSystem * system = new CheckableSystem();
