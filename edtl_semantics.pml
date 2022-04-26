@@ -39,6 +39,7 @@ active proctype edtl_automata() {
 
     do
         ::state == s_start -> {
+            //init?
             state = s_trigger1;
         }
         ::state == s_trigger1 -> {
@@ -46,7 +47,7 @@ active proctype edtl_automata() {
                 ::trigger == false -> {
                     read();
                 }
-                ::else -> state == s_release1;
+                ::else -> state = s_release1;
             fi
         }
         ::state == s_release1 -> {
