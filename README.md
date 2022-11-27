@@ -38,5 +38,5 @@ if (system->check())
 else
     cout << "System is unsafe " << endl;
 ```
-
+Semantic classification of EDTL requirements throught their LTL formulas simplifications is presented in the <a href="https://ieeexplore.ieee.org/document/9855053">EDM paper</a>
 
