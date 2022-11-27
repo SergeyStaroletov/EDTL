@@ -6,7 +6,7 @@ from enum import Enum
 import unittest
   
 #
-# Enum-class for check the type 
+# Enum-class for checking the type 
 #
 class TermType(Enum):
      BoolConst = 0
@@ -370,7 +370,7 @@ def WeakUntil(a:Term, b:Term):
 #
 # TESTS
 #
-class TestStringMethods(unittest.TestCase):
+class TestSimplifiers(unittest.TestCase):
       
     def setUp(self):
         print("Running tests for simplifiers...")
@@ -446,7 +446,6 @@ class TestStringMethods(unittest.TestCase):
 #
 # MAIN
 #
-
 def Main():
 
   import pandas as pd
@@ -487,55 +486,55 @@ def Main():
     invariant = konv(invariant_txt)
 
     trigger = BoolFreeTerm('trig')
-    x0 = ConSimpl(trigger, No(release));
-    x1 = ConSimpl(invariant, reaction);
-    x2 = DisSimpl(release, x1);
-    x3 = ConSimpl(invariant, No(delay));
-    x4 = UntilSimpl(x3, x2);
-    x5 = ConSimpl(final, x4);
+    x0 = ConSimpl(trigger, No(release))
+    x1 = ConSimpl(invariant, reaction)
+    x2 = DisSimpl(release, x1)
+    x3 = ConSimpl(invariant, No(delay))
+    x4 = UntilSimpl(x3, x2)
+    x5 = ConSimpl(final, x4)
     x6 = DisSimpl(release, x5)
-    x7 = ConSimpl(invariant, No(final));
-    x8 = UntilSimpl(x7, x6);
+    x7 = ConSimpl(invariant, No(final))
+    x8 = UntilSimpl(x7, x6)
 
-    x9 = ConSimpl(invariant, No(final));
-    x10 = GloballySimpl(x9);
-    x11 = DisSimpl(x10, x8);
-    x12 = ConSimpl(invariant, x11);
-    x13 = ImplSimpl(x0, x12);
-    x14 = GloballySimpl(x13);
+    x9 = ConSimpl(invariant, No(final))
+    x10 = GloballySimpl(x9)
+    x11 = DisSimpl(x10, x8)
+    x12 = ConSimpl(invariant, x11)
+    x13 = ImplSimpl(x0, x12)
+    x14 = GloballySimpl(x13)
 
     
     trigger = BoolConstTerm(True)
     
-    y0 = ConSimpl(trigger, No(release));
-    y1 = ConSimpl(invariant, reaction);
-    y2 = DisSimpl(release, y1);
-    y3 = ConSimpl(invariant, No(delay));
-    y4 = UntilSimpl(y3, y2);
-    y5 = ConSimpl(final, y4);
+    y0 = ConSimpl(trigger, No(release))
+    y1 = ConSimpl(invariant, reaction)
+    y2 = DisSimpl(release, y1)
+    y3 = ConSimpl(invariant, No(delay))
+    y4 = UntilSimpl(y3, y2)
+    y5 = ConSimpl(final, y4)
     y6 = DisSimpl(release, y5)
-    y7 = ConSimpl(invariant, No(final));
-    y8 = UntilSimpl(y7, y6);
-    y9 = ConSimpl(invariant, No(final));
+    y7 = ConSimpl(invariant, No(final))
+    y8 = UntilSimpl(y7, y6)
+    y9 = ConSimpl(invariant, No(final))
 
-    y10 = GloballySimpl(y9);
-    y11 = DisSimpl(y10, y8);
-    y12 = ConSimpl(invariant, y11);
-    y13 = ImplSimpl(y0, y12);
-    y14 = GloballySimpl(y13);
+    y10 = GloballySimpl(y9)
+    y11 = DisSimpl(y10, y8)
+    y12 = ConSimpl(invariant, y11)
+    y13 = ImplSimpl(y0, y12)
+    y14 = GloballySimpl(y13)
 
     trigger = BoolConstTerm(False)
     z1 = BoolConstTerm(True)
     
-    mas[i][0] = BoolToString(release);
-    mas[i][1] = BoolToString(delay);
-    mas[i][2] = BoolToString(final);
-    mas[i][3] = BoolToString(reaction);
-    mas[i][4] = BoolToString(invariant);
+    mas[i][0] = BoolToString(release)
+    mas[i][1] = BoolToString(delay)
+    mas[i][2] = BoolToString(final)
+    mas[i][3] = BoolToString(reaction)
+    mas[i][4] = BoolToString(invariant)
 
-    mas[i][5] = BoolToString(x14);
-    mas[i][6] = BoolToString(y14);
-    mas[i][7] = BoolToString(z1);
+    mas[i][5] = BoolToString(x14)
+    mas[i][6] = BoolToString(y14)
+    mas[i][7] = BoolToString(z1)
 
   for i in range(0, len(mas)):
       for i2 in range(0, len(mas[i])):
