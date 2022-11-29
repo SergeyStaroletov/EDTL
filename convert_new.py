@@ -1,3 +1,4 @@
+# EDTL patterns and LTL projections - simplifacator to obtain classes 
 # @author getmanova
 # @author star
 
@@ -44,9 +45,9 @@ class Term:
   def type(self) -> TermType:
     pass
   def equals(self, other: Term) -> bool:
-    #print('checking ')
-    #print(self.printme() + ' vs ')
-    #print(other.printme())
+    print('checking ')
+    print(self.printme() + ' vs ')
+    print(other.printme())
     return self.printme() == other.printme()
  
 #
@@ -183,7 +184,7 @@ def DisSimpl(a:Term, b:Term):
   (b.right().left().equals(a)):
     return OrTerm(a, AndTerm(b.left(), b.right().right())) 
   #a ∨ F(a ∨ b) = F(a ∨ b)
-  elif (b.type() == TermType.F) and (b.left().type() == TermType.Or):
+  elif (b.type() == TermType.F) and (b.left().type() == TermType.Or) and a.equals(b.left().left()):
     return b
   #a ∨ (b U a) = (b U a)
   elif (b.type() == TermType.U) and (b.right().equals(a)):
@@ -276,7 +277,7 @@ def GloballySimpl(a:Term):
       print(a.right().right().right().type())
       #return GTerm(AndTerm(a.left().left().left(), OrTerm(GTerm(a.left().left().right()), FTerm(AndTerm(a.right().right().left(),
       #FTerm(a.right().right().right().right().right()))))))
-      return GTerm(ConSimpl(a.left().left().left(), DisSimpl(GloballySimpl(a.left().left().right()), FutureSimpl(DisSimpl(a.right().right().left(),
+      return GloballySimpl(ConSimpl(a.left().left().left(), DisSimpl(GloballySimpl(a.left().left().right()), FutureSimpl(ConSimpl(a.right().right().left(),
       FutureSimpl(a.right().right().right().right().right()))))))
       
   #53 G(G(a ∧ ¬b) ∨ ((a ∧ ¬b) U (b ∧ (a ∧ c)))) = G(a ∧ (G(¬b) ∨ F(b ∧ c)))
@@ -286,8 +287,8 @@ def GloballySimpl(a:Term):
     (a.right().right().right().type() == TermType.And) and CheckNotHelper(a.left().left().right(), a.right().right().left()):
       #return GTerm(AndTerm(a.left().left().left(), OrTerm(GTerm(a.left().left().right()), 
       #FTerm(AndTerm(a.right().right().left(), a.right().right().right().right())))))
-      return GTerm(ConSimpl(a.left().left().left(), DisSimpl(GloballySimpl(a.left().left().right()), 
-      FutureSimpl(DisSimpl(a.right().right().left(), a.right().right().right().right())))))
+      return GloballySimpl(ConSimpl(a.left().left().left(), DisSimpl(GloballySimpl(a.left().left().right()), 
+      FutureSimpl(ConSimpl(a.right().right().left(), a.right().right().right().right())))))
 
   #44 G(G(a) ∨ (a U b)) = G(a ∧ F(b))
   elif (a.type() == TermType.Or) and (a.left().type() == TermType.G) and (a.right().type() == TermType.U) and \
@@ -326,8 +327,8 @@ def UntilSimpl(a:Term, b:Term):
 
   #¬a U (b ∨ a) = F(a) ∨ (¬a U b)
   elif (a.type() == TermType.Not) and (b.type() == TermType.Or) and (CheckNotHelper(a, b.right())):
-    #return disSimpl(FutureSimpl(a.left()), UntilSimpl(a, b.left()))
-    return OrTerm(FTerm(a.left()), UTerm(a, b.left()))
+    return DisSimpl(FutureSimpl(a.left()), UntilSimpl(a, b.left()))
+    #return OrTerm(FTerm(a.left()), UTerm(a, b.left()))
     
   #46 (a ∧ b) U (c ∨ a) = a ∨ ((a ∧ b) U c)
   elif (a.type() == TermType.And) and (b.type() == TermType.Or) and (a.left().equals(b.right())):
@@ -551,5 +552,5 @@ def Main():
 
 
 if __name__ == '__main__':
-  #unittest.main()
-  Main()
+  unittest.main()
+  #Main()
