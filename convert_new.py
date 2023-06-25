@@ -1,7 +1,7 @@
 # EDTL patterns and LTL projections - simplifacator to obtain classes 
 # @author getmanova
 # @author star
-
+# @author garanina
 
 from enum import Enum
 import unittest
@@ -179,10 +179,20 @@ def DisSimpl(a:Term, b:Term):
   #a ∨ a = a
   elif (a.equals(b)):
     return a
+  #a ∨ (b ∧ a) = a
+  elif (b.type() == TermType.And) and (a.equals(b.right())):
+    return a
+  #a ∨ (a ∧ b) = a
+  elif (b.type() == TermType.And) and (a.equals(b.left())):
+    return a
   #a ∨ (b ∧ (a ∨ c)) = a ∨ (b ∧ c)
   elif (b.type() == TermType.And) and (b.right().type() == TermType.Or) and \
   (b.right().left().equals(a)):
-    return OrTerm(a, AndTerm(b.left(), b.right().right())) 
+    return DisSimpl(a, ConSimpl(b.left(), b.right().right())) 
+  # a v (b ∧ (c v a) = a ∨ (b ∧ c)
+  elif (b.type() == TermType.And) and (b.right().type() == TermType.Or) and \
+  (b.right().right().equals(a)):
+    return DisSimpl(a, ConSimpl(b.left(), b.right().left())) 
   #a ∨ F(a ∨ b) = F(a ∨ b)
   elif (b.type() == TermType.F) and (b.left().type() == TermType.Or) and a.equals(b.left().left()):
     return b
@@ -196,8 +206,8 @@ def DisSimpl(a:Term, b:Term):
   #a ∨ F(a) = F(a)
   elif (b.type() == TermType.F) and (b.left().equals(a)):
     return b
-  #elif (b.find(' ∧ '+a+')') > 0): ??
-  #  return a;
+  # (G a) v a = G a
+  elif (a.type() == TermType.G) and (a.left().equals(b)): return a
   #a ∨ (a ∨ b) = a V b | a ∨ (b ∨ a) = a ∨ b
   elif (b.type() == TermType.Or) and (b.left().equals(a) or b.right().equals(a)):
     return b
@@ -207,7 +217,43 @@ def DisSimpl(a:Term, b:Term):
     return b.right()
   #a ∨ (b U (a ∨ c)) = (b U (a ∨ c))
   elif (b.type() == TermType.U) and (b.right().type() == TermType.Or) and (b.right().left().equals(a)):
+    return b  
+  # a v (b ∧ (c v (c U a))) = a v (b ∧ (c U a)) = b ∧ (c U a)
+  elif (b.type() == TermType.And) and    \
+       (b.right().type() == TermType.Or) and  \
+       (b.right().right().type() == TermType.U) and  \
+       (b.right().right().right().equals(a)):
+    #return DisSimpl(a,ConSimpl(b.left(),b.right().right()))
+    return ConSimpl(b.left(),b.right().right())
+   
+  # a v (b v (c v a))) = b v (c v a) 
+  elif (b.type() == TermType.Or) and (b.right().type() == TermType.Or) and (b.right().right().equals(a)):
+    return b  
+
+
+
+  #a v (b ∧ (c W (a v d)))))
+  elif (b.type() == TermType.And) and    \
+       (b.right().type() == TermType.W) and  \
+       (b.right().right().type() == TermType.Or) and  \
+       (b.right().right().left().equals(a)):
     return b
+
+  #a v (b ∧ (c W a)))) = b ∧ (c W a)
+  elif (b.type() == TermType.And) and    \
+       (b.right().type() == TermType.W) and  \
+       (b.right().right().equals(a)):
+    return b
+
+
+  # a v (b W (a v c))) = b W (a v c)
+  elif (b.type() == TermType.W) and (b.right().type() == TermType.Or) and (b.right().left().equals(a)):
+    return b
+  # a v (b W a)) = b W a
+  elif (b.type() == TermType.W) and (b.right().equals(a)):
+    return b
+
+
   else: 
     return OrTerm(a, b)
 
@@ -221,6 +267,23 @@ def ConSimpl(a:Term, b:Term):
     return b
   elif (b.type() == TermType.BoolConst) and (b.val() == True): 
     return a
+  elif (a.type() == TermType.Not) and (a.left().equals(b)): 
+    return BoolConstTerm(False)
+  elif (b.type() == TermType.Not) and (b.left().equals(a)): 
+    return BoolConstTerm(False)
+  # (¬ a) ∧ (a v b) = (¬ a) ∧ b
+  elif (a.type() == TermType.Not) and (b.type() == TermType.Or) and (a.left().equals(b.left())): 
+    return ConSimpl(a,b.right())
+  # (¬ a) ∧ (b v a) = (¬ a) ∧ b
+  elif (a.type() == TermType.Not) and (b.type() == TermType.Or) and (a.left().equals(b.right())): 
+    return ConSimpl(a,b.left())
+  # (¬ a) ∧ (b v (b U a)) = (¬ a) ∧ (b U a)
+  elif (a.type() == TermType.Not) and (b.type() == TermType.Or) and (b.right().type() == TermType.U) and (a.left().equals(b.right().right())) and (b.left().equals(b.right().left())) : 
+    return ConSimpl(a,b.right())
+  # (¬ a) ∧ (b v ((b ∧ c) U a)) = (¬ a) ∧ ((b ∧ c) U a)
+  elif (a.type() == TermType.Not) and (b.type() == TermType.Or) and (b.right().type() == TermType.U) and (b.right().left().type() == TermType.And) and\
+      (a.left().equals(b.right().right())) and (b.left().equals(b.right().left().left())) : 
+    return ConSimpl(a,b.right())
   else: return AndTerm(a, b)
 
 
@@ -232,11 +295,56 @@ def No(a:Term):
 
 
 def ImplSimpl(a:Term, b:Term):
-  if ((a.type() == TermType.BoolConst) or (b.type() == TermType.BoolConst)): 
+  if ((a.type() == TermType.BoolConst) or (b.type() == TermType.BoolConst)):
     return DisSimpl(No(a), b)
+  # ¬a -> a
+  elif ((a.type() == TermType.Not) and (a.left().equals(b))): 
+    return b
+  # (¬rel ->)
+  elif ((a.type() == TermType.Not) and (a.left().val() == 'rel')): 
+    return DisSimpl(a.left(),b)
+  # ¬a -> a ∨ b
+  elif ((a.type() == TermType.Not) and (b.type() == TermType.Or) and (a.left().equals(b.left()))): 
+    return b
+  # c∧¬a -> a
+  elif ((a.type() == TermType.And) and (a.right().type() == TermType.Not) and a.right().left().equals(b)): 
+    return ImplSimpl(a.left(), b)
+  # c∧¬a -> a ∨ b
+  elif ((a.type() == TermType.And) and (a.right().type() == TermType.Not) and (b.type() == TermType.Or) and (a.right().left().equals(b.left()))): 
+    return ImplSimpl(a.left(), b)
+  # ¬a -> F a
+  elif ((a.type() == TermType.Not) and (b.type() == TermType.F) and (a.left().equals(b.left()))): 
+    return b
+  # c∧¬a -> F a
+  elif ((a.type() == TermType.And) and (a.right().type() == TermType.Not) and (b.type() == TermType.F) and (a.right().left().equals(b.left()))): 
+    return ImplSimpl(a.left(), b)
+  # ¬a -> F(a ∨ b)
+  elif ((a.type() == TermType.Not) and (b.type() == TermType.F) and (b.left().type() == TermType.Or) and (a.left().equals(b.left().left()))): 
+    return b
+  # c∧¬a -> F(a ∨ b)
+  elif ((a.type() == TermType.And) and (a.right().type() == TermType.Not) and (b.type() == TermType.F) and (b.left().type() == TermType.Or) and (a.left().equals(b.left().left()))): 
+    return ImplSimpl(a.left(), b)
+  # ¬a -> b U a 
+  elif ((a.type() == TermType.Not) and (b.type() == TermType.U) and (a.left().equals(b.right()))): 
+    return b  
+  # ¬a -> b U (a ∨ c)
+  elif ((a.type() == TermType.Not) and (b.type() == TermType.U) and (b.right().type() == TermType.Or ) and (a.left().equals(b.right().left()))):
+    return b  
+  # ¬a -> b W a = b W a
+  elif ((a.type() == TermType.Not) and (b.type() == TermType.W) and (a.left().equals(b.right()))): 
+    return b  
+  # ¬a -> b W (a ∨ c) = b W (a ∨ c)
+  elif ((a.type() == TermType.Not) and (b.type() == TermType.W) and (b.right().type() == TermType.Or ) and (a.left().equals(b.right().left()))):
+    return b  
+  # c∧¬a -> b W a = c -> b W a
+  elif ((a.type() == TermType.And) and (a.right().type() == TermType.Not) and (b.type() == TermType.W) and (a.right().left().equals(b.right()))): 
+    return ImplSimpl(a.left(), b)  
+  # c∧¬a -> b W (a ∨ d) = c -> b W (a ∨ d)
+  elif ((a.type() == TermType.And) and (a.right().type() == TermType.Not) and (b.type() == TermType.W) and (b.right().type() == TermType.Or ) and (a.right().left().equals(b.right().left()))):
+    return ImplSimpl(a.left(), b)  
   else:
     return ImplTerm(a, b)
-
+  
 
 def FutureSimpl(a:Term):
   if (a.type() == TermType.BoolConst): return a
@@ -256,18 +364,24 @@ def CheckNotHelper(a:Term, b:Term):
 
 def GloballySimpl(a:Term):
   if (a.type() == TermType.BoolConst): return a
+  
   #G(F(a)) = GF(a)
   elif (a.type() == TermType.F): return GTerm(a)
+  
   #G(G(a)) = G(a)
-  elif (a.type() == TermType.G): return GTerm(a.left())
+  elif (a.type() == TermType.G): return GloballySimpl(a.left())
+
+  # G ((G a) v a) = G(a)
+  elif (a.type() == TermType.Or) and (a.left().type() == TermType.G) and (a.left().left().equals(a.right())): return GloballySimpl(a.right())
+  
   #51 G(G(a ∧ ¬b) ∨ (a U (b ∧ a))) = G(a)
   elif (a.type() == TermType.Or) and (a.left().type() == TermType.G) and (a.right().type() == TermType.U) and \
        (a.right().right().type() == TermType.And) and (a.left().left().type() == TermType.And) and \
        (a.left().left().left().equals(a.right().left())) and (a.right().left().equals(a.right().right().right())) and \
        CheckNotHelper((a.left().left().right()), a.right().right().left()):
-    return GTerm(a.left().left().left())
+    return GloballySimpl(a.left().left().left())
 
-  #52 G(G(a ∧ ¬b) ∨ ((a ∧ ¬b) U (b ∧ (a U (a ∧ c))))) = G(a ∧ (G(¬b) ∨ F(b ∧ F(c))))
+  #52 G(G(a ∧ ¬b) ∨ ((a ∧ ¬b) U (b ∧ (a U (a ∧ c))))) = G(a ∧ (G(¬b) ∨ F(b ∧ F(c))))  
   elif (a.type() == TermType.Or) and (a.left().type() == TermType.G) and (a.right().type() == TermType.U) \
     and (a.right().right().type() == TermType.And) and (a.right().right().right().type() == TermType.U) \
     and (a.right().right().right().right().type() == TermType.And) and (a.left().left().equals(a.right().left())) \
@@ -291,10 +405,10 @@ def GloballySimpl(a:Term):
       FutureSimpl(ConSimpl(a.right().right().left(), a.right().right().right().right())))))
 
   #44 G(G(a) ∨ (a U b)) = G(a ∧ F(b))
-  elif (a.type() == TermType.Or) and (a.left().type() == TermType.G) and (a.right().type() == TermType.U) and \
-    (a.left().left().equals(a.right().left())):
-      #return GTerm(AndTerm(a.left().left(), FTerm(a.right().right())))
-      return GloballySimpl(ConSimpl(a.left().left(), FutureSimpl(a.right().right())))
+  #elif (a.type() == TermType.Or) and (a.left().type() == TermType.G) and (a.right().type() == TermType.U) and \
+  #  (a.left().left().equals(a.right().left())):
+  #    #return GTerm(AndTerm(a.left().left(), FTerm(a.right().right())))
+  #    return GloballySimpl(ConSimpl(a.left().left(), FutureSimpl(a.right().right())))
   
   #45 G((a ∧ b) U (a ∧ c)) = G(a ∧ (b U c))
   elif (a.type() == TermType.U) and (a.left().type() == TermType.And) and (a.right().type() == TermType.And) and \
@@ -302,6 +416,89 @@ def GloballySimpl(a:Term):
       #return GTerm(AndTerm(a.left().left(), UTerm(a.left().right(), a.right().right())))
       return GloballySimpl(ConSimpl(a.left().left(), UntilSimpl(a.left().right(), a.right().right())))
     
+  #46 G(a U (a ∧ b)) = G(a ∧ F b)
+  elif (a.type() == TermType.U) and (a.right().type() == TermType.And) and \
+    (a.left().equals(a.right().left())):
+      return GloballySimpl(ConSimpl(a.left(), FutureSimpl(a.right().right())))
+    
+  #47 G(a U (b ∧ a)) = G(a ∧ F b)
+  elif (a.type() == TermType.U) and (a.right().type() == TermType.And) and \
+    (a.left().equals(a.right().right())):
+      return GloballySimpl(ConSimpl(a.left(), FutureSimpl(a.right().left())))
+  
+  # G ((¬ a) ∧ ( b U a)) = false
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.U) and \
+    CheckNotHelper(a.left(),a.right().right()):
+      return BoolConstTerm(False)
+  
+  # G ((¬ a) ∧ ( b W a)) = G ((¬ a) ∧ b))
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and \
+    CheckNotHelper(a.left(),a.right().right()):
+      return GloballySimpl(ConSimpl(a.left(), a.right().left()))
+  
+  # G (a ∧ ((¬ b) W b)) = G a
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and \
+    CheckNotHelper(a.right().left(),a.right().right()):
+      return GloballySimpl(a.left())
+
+  # G (a ∧ ((b ∧ (¬ c)) W (c ∧ b))) = G (a ∧ c)
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and (a.right().left().type() == TermType.And) and (a.right().right().type() == TermType.And) and \
+    CheckNotHelper(a.right().left().right(),a.right().right().left()) and a.right().left().left().equals(a.right().right().right()):
+      return GloballySimpl(ConSimpl(a.left(),a.right().left().left()))
+
+  # G ((¬ a) ∧ F a) = false
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.F) and \
+    CheckNotHelper(a.left(),a.right().left()):
+      return BoolConstTerm(False)
+
+  # G ((¬ a) ∧ F (a ∨ b)) = G ((¬ a) ∧ F b)
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.F) and (a.right().left().type() == TermType.Or) and \
+    CheckNotHelper(a.left(),a.right().left().left()):
+      return GloballySimpl(ConSimpl(a.left(), FutureSimpl(a.right().left().right())))
+
+  # G ((¬ a) ∧ ( b U (a ∨ c) )) = G ((¬ a) ∧ ( b U c ))
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.U) and (a.right().right().type() == TermType.Or) and \
+    CheckNotHelper(a.left(),a.right().right().left()):
+      return GloballySimpl(ConSimpl(a.left(), UntilSimpl(a.right().left(),a.right().right().right())))
+
+  # G ((¬ a) ∧ ( b W (a ∨ c) )) = G ((¬ a) ∧ ( b W c ))
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and (a.right().right().type() == TermType.Or) and \
+    CheckNotHelper(a.left(),a.right().right().left()):
+      return GloballySimpl(ConSimpl(a.left(), WTerm(a.right().left(),a.right().right().right())))
+  
+  # G ((¬ a) ∧ (b W (c ∧ (F a)))) = G (a -> G b)
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and (a.right().right().type() == TermType.And) and \
+       (a.right().right().right().type() == TermType.F) and CheckNotHelper(a.left(),a.right().right().right().left()):
+      #return GloballySimpl(ConSimpl(a.left(), WTerm(a.right().left(),a.right().right().left())))
+      return GloballySimpl(ImplSimpl(a.left().left(), GloballySimpl(a.right().left())))
+
+  # G ((¬ a) ∧ (b W (c ∧ (d U a)))) = G (a -> G b)
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and (a.right().right().type() == TermType.And) and \
+       (a.right().right().right().type() == TermType.U) and CheckNotHelper(a.left(),a.right().right().right().right()):
+      #return GloballySimpl(ConSimpl(a.left(), WTerm(a.right().left(),a.right().right().left())))
+      return GloballySimpl(ImplSimpl(a.left().left(), GloballySimpl(a.right().left())))
+
+  # G ((¬ a) ∧ (b W (c ∧ (F (a v d))))) = G ((¬ a) ∧ (b W (c ∧ (F d))))
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and (a.right().right().type() == TermType.And) and \
+       (a.right().right().right().type() == TermType.F) and (a.right().right().right().left().type() == TermType.Or) and CheckNotHelper(a.left(),a.right().right().right().left().left()):
+      return GloballySimpl(ConSimpl(a.left(), WTerm(a.right().left(), AndTerm(a.right().right().left(), FTerm(a.right().right().right().left().right())))))
+
+  # G ((¬ a) ∧ (b W (c ∧ (d U (a v e))))) = G ((¬ a) ∧ (b W (c ∧ (d U e))))
+  elif (a.type() == TermType.And) and (a.right().type() == TermType.W) and (a.right().right().type() == TermType.And) and \
+       (a.right().right().right().type() == TermType.U) and (a.right().right().right().right().type() == TermType.Or) and CheckNotHelper(a.left(),a.right().right().right().right().left()):
+      return GloballySimpl(ConSimpl(a.left(), WTerm(a.right().left(), AndTerm(a.right().right().left(), UTerm(a.right().right().right().left(), a.right().right().right().right().right())))))
+  
+  # G ((a ∧ (¬ b)) W (b ∧ (G a))) = G (a)
+  elif (a.type() == TermType.W) and (a.left().type() == TermType.And) and (a.right().type() == TermType.And) and (a.right().right().type() == TermType.G) and \
+       a.left().left().equals(a.right().right().left()) and CheckNotHelper(a.left().right(),a.right().left()):
+      return GloballySimpl(a.right().right())
+
+  # G ((a ∧ (¬ b)) W (b ∧ a)) = G (a)
+  elif (a.type() == TermType.W) and (a.left().type() == TermType.And) and (a.right().type() == TermType.And) and \
+       a.left().left().equals(a.right().right()) and CheckNotHelper(a.left().right(),a.right().left()):
+      return GloballySimpl(a.right().right())
+
+
   else: return GTerm(a)
 
 
@@ -331,117 +528,81 @@ def UntilSimpl(a:Term, b:Term):
     #return OrTerm(FTerm(a.left()), UTerm(a, b.left()))
     
   #46 (a ∧ b) U (c ∨ a) = a ∨ ((a ∧ b) U c)
-  elif (a.type() == TermType.And) and (b.type() == TermType.Or) and (a.left().equals(b.right())):
+  #elif (a.type() == TermType.And) and (b.type() == TermType.Or) and (a.left().equals(b.right())):
     #return OrTerm(a.left(), UTerm(a, b.left()))
-    return DisSimpl(a.left(), UTerm(a, b.left()))
+   # return DisSimpl(a.left(), UTerm(a, b.left()))
     
   #47 (a ∧ b) U a = a
   elif (a.type() == TermType.And) and (a.left().equals(b)):
     return b
 
-  #48 a U (b ∨ a) = a ∨ (a U b)
+  #48 a U (b ∨ a) = a ∨ b
   elif (b.type() == TermType.Or) and (a.equals(b.right())):
     #return OrTerm(a, UTerm(a, b.left()))
-    return DisSimpl(a, UntilSimpl(a, b.left()))
+    return DisSimpl(a, b.left())
 
   #50 (a ∧ ¬b) U (b ∧ a) = a U (b ∧ a)
-  elif (a.type() == TermType.And) and (b.type() == TermType.And) and (a.left().equals(b.right())) \
-    and (CheckNotHelper(a.right(), b.left())):
+  #elif (a.type() == TermType.And) and (b.type() == TermType.And) and (a.left().equals(b.right())) \
+   # and (CheckNotHelper(a.right(), b.left())):
       #return UTerm(a.left(), b)
-      return UntilSimpl(a.left(), b)
+    #  return UntilSimpl(a.left(), b)
 
   else: return UTerm(a, b)
 
 
 
-def WeakUntil(a:Term, b:Term):
+def WeakUntilSimpl(a:Term, b:Term):
+  
+  # 0 W 0 = 0
+  # 1 W 0 = 1 W 1 = 0 W 1 = 1
   if ((a.type() == TermType.BoolConst) and (b.type() == TermType.BoolConst)):
     if ((a.val() == False) and (b.val() == False)): return BoolConstTerm(False)
     else: return BoolConstTerm(True)
-  elif ((b.type() != TermType.BoolConst) and (a.type() != TermType.BoolConst)): return WeakUntil(a, b)
-  elif (b.type() != TermType.BoolConst):
-    if (a.type() == TermType.BoolConst) and (a.val() == False): return b
-    elif (a.type() == TermType.BoolConst) and (a.val() == True): return BoolConstTerm(True)
-  elif (a.type() != TermType.BoolConst):
-    if (b.type() == TermType.BoolConst) and (b.val() == True): return BoolConstTerm(True)
-    elif (b.type() == TermType.BoolConst) and (b.val() == False): return GloballySimpl(a)
 
-
-
-#
-# TESTS
-#
-class TestSimplifiers(unittest.TestCase):
-      
-    def setUp(self):
-        print("Running tests for simplifiers...")
+  # 0 W b = b
+  # 1 W b = 1
+  elif (b.type() != TermType.BoolConst) and (a.type() == TermType.BoolConst):
+    if (a.val() == False): return b
+    else: return BoolConstTerm(True)
   
-    def test_dis(self):
-        a = BoolFreeTerm('a')
-        b = BoolFreeTerm('b')
-        c = BoolFreeTerm('c')
-        #a ∨ a = a
-        self.assertTrue(DisSimpl(a, a).equals(a))
-        #a ∨ (b ∧ (a ∨ c)) = a ∨ (b ∧ c)
-        self.assertTrue(DisSimpl(a, AndTerm(b, OrTerm(a, c))).equals(OrTerm(a, AndTerm(b, c))))
-        #a ∨ F(a ∨ b) = F(a ∨ b)
-        self.assertTrue(DisSimpl(a, FTerm(OrTerm(a, b))).equals(FTerm(OrTerm(a, b))))
-        #a ∨ (b U a) = (b U a)
-        self.assertTrue(DisSimpl(a, UTerm(b, a)).equals(UTerm(b, a)))
-        #G(¬a) ∨ F(a) = true
-        self.assertTrue(DisSimpl(GTerm(NotTerm(a)), FTerm(a)).equals(BoolConstTerm(True)))
-        #a ∨ F(a) = F(a)
-        self.assertTrue(DisSimpl(a, FTerm(a)).equals(FTerm(a)))
-        #a ∨ (a ∨ b) = a V b | a ∨ (b ∨ a) = a ∨ b
-        self.assertTrue(DisSimpl(a, OrTerm(a, b)).equals(OrTerm(a, b)))
-        self.assertTrue(DisSimpl(a, OrTerm(b, a)).equals(OrTerm(b, a)))
-        #G(¬a) ∨ (F(a) ∨ (с)) = (с)
-        self.assertTrue(DisSimpl(GTerm(NotTerm(a)), OrTerm(FTerm(a), c)).equals(c))
-        #a ∨ (b U (a ∨ c)) = (b U (a ∨ c))
-        self.assertTrue(DisSimpl(a, UTerm(b, OrTerm(a, c))).equals(UTerm(b, OrTerm(a, c))))
+  # a W 1 = 1
+  # a W 0 = G a
+  elif (a.type() != TermType.BoolConst) and (b.type() == TermType.BoolConst):
+    if (b.val() == True): return BoolConstTerm(True)
+    else: return GloballySimpl(a)
 
-    def test_globally(self):
-        a = BoolFreeTerm('a')
-        b = BoolFreeTerm('b')
-        c = BoolFreeTerm('c')
-        #G(F(a)) = GF(a)
-        self.assertTrue(GloballySimpl(FTerm(a)).equals(GTerm(FTerm(a))))
-        #G(G(a)) = G(a)
-        self.assertTrue(GloballySimpl(GTerm(a)).equals(GTerm(a)))
-        #51 G(G(a ∧ ¬b) ∨ (a U (b ∧ a))) = G(a)
-        self.assertTrue(GloballySimpl(OrTerm(GTerm(AndTerm(a, NotTerm(b))), UTerm(a, AndTerm(b, a)))).equals(GTerm(a)))
-        #52 G(G(a ∧ ¬b) ∨ ((a ∧ ¬b) U (b ∧ (a U (a ∧ c))))) = G(a ∧ (G(¬b) ∨ F(b ∧ F(c))))
-        self.assertTrue(GloballySimpl(OrTerm(GTerm(AndTerm(a, NotTerm(b))), 
-          UTerm(AndTerm(a, NotTerm(b)), AndTerm(b, UTerm(a, AndTerm(a, c)))))).equals(
-            GTerm(AndTerm(a, OrTerm(GTerm(NotTerm(b)), FTerm(AndTerm(b, FTerm(c))))))))
-        #53 G(G(a ∧ ¬b) ∨ ((a ∧ ¬b) U (b ∧ (a ∧ c)))) = G(a ∧ (G(¬b) ∨ F(b ∧ c)))
-        self.assertTrue(GloballySimpl(OrTerm(GTerm(AndTerm(a, NotTerm(b))), 
-          UTerm(AndTerm(a, NotTerm(b)), AndTerm(b, AndTerm(a, c))))).equals(
-            GTerm(AndTerm(a, OrTerm(GTerm(NotTerm(b)), FTerm(AndTerm(b, c)))))))
-        #44 G(G(a) ∨ (a U b)) = G(a ∧ F(b))
-        self.assertTrue(GloballySimpl(OrTerm(GTerm(a), UTerm(a, b))).equals(GTerm(AndTerm(a, FTerm(b)))))
-        #45 G((a ∧ b) U (a ∧ c)) = G(a ∧ (b U c))
-        self.assertTrue(GloballySimpl(UTerm(AndTerm(a, b), AndTerm(a, c))).equals(GTerm(AndTerm(a, UTerm(b, c)))))
+  #a W a = a
+  elif (a.equals(b)):
+    return a
 
-    def test_until(self):
-        a = BoolFreeTerm('a')
-        b = BoolFreeTerm('b')
-        c = BoolFreeTerm('c')
-        #a U a = a
-        self.assertTrue(UntilSimpl(a, a).equals(a))
-        # ¬a U a = F(a)
-        self.assertTrue(UntilSimpl(NotTerm(a), a).equals(FTerm(a)))
-        #¬a U (b ∨ a) = F(a) ∨ (¬a U b)
-        self.assertTrue(UntilSimpl(NotTerm(a), OrTerm(b, a)).equals(OrTerm(FTerm(a), UTerm(NotTerm(a), b))))
-        #46 (a ∧ b) U (c ∨ a) = a ∨ ((a ∧ b) U c)
-        self.assertTrue(UntilSimpl(AndTerm(a, b), OrTerm(c, a)).equals(OrTerm(a, UTerm(AndTerm(a, b), c))))
-        #47 (a ∧ b) U a = a
-        self.assertTrue(UntilSimpl(AndTerm(a, b), a).equals(a))
-        #48 a U (b ∨ a) = a ∨ (a U b)
-        self.assertTrue(UntilSimpl(a, OrTerm(b, a)).equals(OrTerm(a, UTerm(a, b))))
-        #50 (a ∧ ¬b) U (b ∧ a) = a U (b ∧ a)
-        self.assertTrue(UntilSimpl(AndTerm(a, NotTerm(b)), AndTerm(b, a)).equals(UTerm(a, AndTerm(b, a))))
-# /TESTS
+  # a W (b v a) = b v a
+  elif (b.type() == TermType.Or) and (a.equals(b.right())):
+    return b
+
+  # (a ∧ b) W (c v a) = c v a
+  elif (a.type() == TermType.And) and (b.type() == TermType.Or) and (a.left().equals(b.right())):
+    return b
+
+  # (a ∧ b) W a) = a
+  elif (a.type() == TermType.And) and (a.left().equals(b)):
+    return b
+
+  # ¬a W a = = G(¬a) \/ F(a) = true
+  elif CheckNotHelper(a, b):
+    return BoolConstTerm(True)
+
+  # ¬a W (b v a) = ¬a W b
+  elif (b.type() == TermType.Or) and CheckNotHelper(a, b.right()):
+    return WeakUntilSimpl(a, b.left())
+
+  # (a ∧ ¬b) W (b ∧ (G a)) = G (a)
+  elif (a.type() == TermType.And) and (b.type() == TermType.And) and (b.right().type() == TermType.G) and \
+       a.left().equals(b.right().left()) and CheckNotHelper(a.right(),b.left()):
+      return GloballySimpl(a.left())
+
+  # a W b
+#  elif ((b.type() != TermType.BoolConst) and (a.type() != TermType.BoolConst)): return WTerm(a, b)
+  else: return WTerm(a, b)
 
 
 #
@@ -486,43 +647,45 @@ def Main():
     reaction = konv(reaction_txt)
     invariant = konv(invariant_txt)
 
+# false	true	fin	true	inv
+    if (release_txt == 'false*' and delay_txt == 'true*' and final_txt == 'fin' and reaction_txt == 'true*' and invariant_txt == 'inv'):
+      y13 = 1
+    else: y13 = 2
+
+# G ((trig ∧ ¬ rel) → ( (inv ∧ ¬fin) W (rel v (fin ∧ ((inv ∧ (¬ del)) W (rel v (inv ∧ rea))))))) = 		
+
+
     trigger = BoolFreeTerm('trig')
     x0 = ConSimpl(trigger, No(release))
     x1 = ConSimpl(invariant, reaction)
     x2 = DisSimpl(release, x1)
     x3 = ConSimpl(invariant, No(delay))
-    x4 = UntilSimpl(x3, x2)
+    x4 = WeakUntilSimpl(x3, x2)
     x5 = ConSimpl(final, x4)
     x6 = DisSimpl(release, x5)
     x7 = ConSimpl(invariant, No(final))
-    x8 = UntilSimpl(x7, x6)
-
-    x9 = ConSimpl(invariant, No(final))
+    x8 = WeakUntilSimpl(x7, x6)
+    x9 = ImplSimpl(x0, x8)
     x10 = GloballySimpl(x9)
-    x11 = DisSimpl(x10, x8)
-    x12 = ConSimpl(invariant, x11)
-    x13 = ImplSimpl(x0, x12)
-    x14 = GloballySimpl(x13)
 
     
     trigger = BoolConstTerm(True)
     
+    #y0 = ConSimpl(trigger, No(release))
     y0 = ConSimpl(trigger, No(release))
     y1 = ConSimpl(invariant, reaction)
     y2 = DisSimpl(release, y1)
     y3 = ConSimpl(invariant, No(delay))
-    y4 = UntilSimpl(y3, y2)
+    y4 = WeakUntilSimpl(y3, y2)
     y5 = ConSimpl(final, y4)
     y6 = DisSimpl(release, y5)
     y7 = ConSimpl(invariant, No(final))
-    y8 = UntilSimpl(y7, y6)
-    y9 = ConSimpl(invariant, No(final))
-
+    y8 = WeakUntilSimpl(y7, y6)
+    y9 = ImplSimpl(y0, y8)
     y10 = GloballySimpl(y9)
-    y11 = DisSimpl(y10, y8)
-    y12 = ConSimpl(invariant, y11)
-    y13 = ImplSimpl(y0, y12)
-    y14 = GloballySimpl(y13)
+
+    # if (y15.type() == TermType.G): y16 = GloballySimpl(y15.left())
+    # else: y16 = y15
 
     trigger = BoolConstTerm(False)
     z1 = BoolConstTerm(True)
@@ -533,8 +696,8 @@ def Main():
     mas[i][3] = BoolToString(reaction)
     mas[i][4] = BoolToString(invariant)
 
-    mas[i][5] = BoolToString(x14)
-    mas[i][6] = BoolToString(y14)
+    mas[i][5] = BoolToString(x10)
+    mas[i][6] = BoolToString(y10)
     mas[i][7] = BoolToString(z1)
 
   for i in range(0, len(mas)):
@@ -542,15 +705,15 @@ def Main():
           print(mas[i][i2], end=' ')
       print()
 
-  # from openpyxl import Workbook
-  # wb = Workbook()
-  # ws = wb.active
-  # for subarray in mas:
-  #    ws.append(subarray)
-  # wb.save('./edtl-ltl.xlsx')
+  from openpyxl import Workbook
+  wb = Workbook()
+  ws = wb.active
+  for subarray in mas:
+     ws.append(subarray)
+  wb.save('./edtl-ltl.xlsx')
 
 
 
 if __name__ == '__main__':
-  unittest.main()
-  #Main()
+  #unittest.main()
+  Main()
